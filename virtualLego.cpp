@@ -19,7 +19,7 @@
 
 IDirect3DDevice9* Device = NULL;
 
-#define yellowBallCount 54
+#define BallCount 60
 
 // window size
 const int Width  = 1024;
@@ -27,9 +27,9 @@ const int Height = 768;
 
 // There are four balls
 // initialize the position (coordinate) of each ball (ball0 ~ ball3)
-const float spherePos[4][2] = { {-2.7f,0} , {+2.4f,0} , {3.3f,0} , {-2.7f,-0.9f}}; 
+//const float spherePos[4][2] = { {-2.7f,0} , {+2.4f,0} , {3.3f,0} , {-2.7f,-0.9f}}; 
 // initialize the color of each ball (ball0 ~ ball3)
-const D3DXCOLOR sphereColor[4] = {d3d::RED, d3d::RED, d3d::YELLOW, d3d::WHITE};
+//const D3DXCOLOR sphereColor[4] = {d3d::RED, d3d::RED, d3d::YELLOW, d3d::WHITE};
 
 // -----------------------------------------------------------------------------
 // Transform matrices
@@ -53,6 +53,7 @@ private :
     float                   m_radius;
 	float					m_velocity_x;
 	float					m_velocity_z;
+	bool					isPropBall=false;
 
 public:
     CSphere(void)
@@ -67,6 +68,12 @@ public:
     ~CSphere(void) {}
 
 public:
+	void setIsPropBall() {
+		this->isPropBall = true;
+	}
+	bool getIsPropBall() {
+		return this->isPropBall;
+	}
     bool create(IDirect3DDevice9* pDevice, D3DXCOLOR color = d3d::WHITE)
     {
         if (NULL == pDevice)
@@ -98,8 +105,7 @@ public:
         pDevice->SetTransform(D3DTS_WORLD, &mWorld);
         pDevice->MultiplyTransform(D3DTS_WORLD, &m_mLocal);
         pDevice->SetMaterial(&m_mtrl);
-		if(m_pSphereMesh!=NULL)
-			m_pSphereMesh->DrawSubset(0);
+		m_pSphereMesh->DrawSubset(0);
     }
 	
     bool hasIntersected(CSphere& ball) 
@@ -124,7 +130,7 @@ public:
 		// Insert your code here.
 		if (hasIntersected(ball)) {
 			float deltaX = ball.getCenter().x - this->getCenter().x;
-			float deltaZ = ball.getCenter().x - this->getCenter().x;
+			float deltaZ = ball.getCenter().z - this->getCenter().z;
 
 			float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
 			float directionScala = sqrt(deltaX*deltaX + deltaZ * deltaZ);
@@ -132,6 +138,9 @@ public:
 			float scale = velocityVectorScala / directionScala;
 
 			ball.setPower(scale*deltaX, scale*deltaZ);
+
+			if (!this->getIsPropBall())
+				this->setCenter(-4.56f, 1.5f, 0.0f);
 		}
 	}
 
@@ -162,10 +171,10 @@ public:
 		}
 		else { this->setPower(0,0);}
 		//this->setPower(this->getVelocity_X() * DECREASE_RATE, this->getVelocity_Z() * DECREASE_RATE);
-		double rate = 1 -  (1 - DECREASE_RATE)*timeDiff * 400;
+		/*double rate = 1 -  (1 - DECREASE_RATE)*timeDiff * 400;
 		if(rate < 0 )
 			rate = 0;
-		this->setPower(getVelocity_X() * rate, getVelocity_Z() * rate);
+		this->setPower(getVelocity_X() * rate, getVelocity_Z() * rate);*/ //내가 주석 달음
 	}
 
 	double getVelocity_X() { return this->m_velocity_x;	}
@@ -389,9 +398,11 @@ private:
 // -----------------------------------------------------------------------------
 CWall	g_legoPlane;
 CWall	g_legowall[4];
-CSphere	g_sphere[4];
-CSphere	g_target_blueball;
+CSphere	g_sphere[BallCount];
+CSphere	g_hitterBall;
+CSphere	g_propBall;
 CLight	g_light;
+bool gameStart = false;
 
 double g_camera_pos[3] = {0.0, 5.0, -8.0};
 
@@ -428,15 +439,36 @@ bool Setup()
 	g_legowall[3].setPosition(-4.56f, 0.12f, 0.0f);
 
 	// create four balls and set the position
-	for (i=0;i<4;i++) {
-		if (false == g_sphere[i].create(Device, sphereColor[i])) return false;
+	float spherePos[BallCount][2] = {};
+	int posIdx = 0;
+	float row = 2.8;
+	float column = -4.35;
+	for (i = 0; i < 10; i++) {
+		column = -4.35;
+		for (int j = 0; j < 6; j++) {
+			spherePos[posIdx][0] = column;
+			spherePos[posIdx++][1] = row;
+			column += 0.8;
+		}
+		row -= 0.6;
+	}
+
+	for (i=0;i<BallCount;i++) {
+		if (false == g_sphere[i].create(Device, d3d::YELLOW)) return false;
 		g_sphere[i].setCenter(spherePos[i][0], (float)M_RADIUS , spherePos[i][1]);
 		g_sphere[i].setPower(0,0);
 	}
+	if (false == g_hitterBall.create(Device, d3d::RED)) return false;
+	g_hitterBall.setCenter(3.72f, (float)M_RADIUS, 0.0f);
+
+	if (false == g_propBall.create(Device, d3d::BLACK)) return false;
+	g_propBall.setCenter(4.35f, (float)M_RADIUS, 0.0f);
+	g_propBall.setPower(0, 0);
+	g_propBall.setIsPropBall();
 	
 	// create blue ball for set direction
-    if (false == g_target_blueball.create(Device, d3d::BLUE)) return false;
-	g_target_blueball.setCenter(.0f, (float)M_RADIUS , .0f);
+    /*if (false == g_target_blueball.create(Device, d3d::BLUE)) return false;
+	g_target_blueball.setCenter(.0f, (float)M_RADIUS , .0f);*/
 
 	
 	// light setting 
@@ -455,7 +487,7 @@ bool Setup()
         return false;
 	
 	// Position and aim the camera.
-	D3DXVECTOR3 pos(0.0f, 5.0f, -8.0f);
+	D3DXVECTOR3 pos(8.0f, 5.0f, 0.0f);
 	D3DXVECTOR3 target(0.0f, 0.0f, 0.0f);
 	D3DXVECTOR3 up(0.0f, 2.0f, 0.0f);
 	D3DXMatrixLookAtLH(&g_mView, &pos, &target, &up);
@@ -500,26 +532,43 @@ bool Display(float timeDelta)
 		Device->BeginScene();
 		
 		// update the position of each ball. during update, check whether each ball hit by walls.
-		for( i = 0; i < 4; i++) {
+		for( i = 0; i < BallCount; i++) {
 			g_sphere[i].ballUpdate(timeDelta);
 			for(j = 0; j < 4; j++){ g_legowall[i].hitBy(g_sphere[j]); }
 		}
+		g_hitterBall.ballUpdate(timeDelta);
+		g_propBall.ballUpdate(timeDelta);
+
 
 		// check whether any two balls hit together and update the direction of balls
-		for(i = 0 ;i < 4; i++){
-			for(j = 0 ; j < 4; j++) {
-				if(i >= j) {continue;}
+		/*for(i = 0 ;i < BallCount; i++){
+			for(j = 0 ; j < BallCount; j++) {
+				//if(i >= j) {continue;} //내가 주석 처리함.
 				g_sphere[i].hitBy(g_sphere[j]);
 			}
+		}*/
+
+		g_propBall.hitBy(g_hitterBall);
+
+		for (j = 0; j < 4; j++) { 
+			g_legowall[i].hitBy(g_hitterBall); 
+		}
+		for (i = 0; i < BallCount; i++) {
+			g_sphere[i].hitBy(g_hitterBall);
 		}
 
 		// draw plane, walls, and spheres
 		g_legoPlane.draw(Device, g_mWorld);
 		for (i=0;i<4;i++) 	{
 			g_legowall[i].draw(Device, g_mWorld);
+		}
+		for (i = 0; i < BallCount; i++) {
 			g_sphere[i].draw(Device, g_mWorld);
 		}
-		g_target_blueball.draw(Device, g_mWorld);
+
+		g_hitterBall.draw(Device, g_mWorld);
+		g_propBall.draw(Device, g_mWorld);
+		//g_target_blueball.draw(Device, g_mWorld);
         g_light.draw(Device);
 		
 		Device->EndScene();
@@ -557,16 +606,19 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 }
                 break;
 			case VK_LEFT:
-				g_sphere[2].setPower(10, 10);
+				g_propBall.setPower(0, -3.0f);
 
 				break;
 			case VK_RIGHT:
-				
+				g_propBall.setPower(0, +3.0f);
 
 				break;
             case VK_SPACE:
-				
-				D3DXVECTOR3 targetpos = g_target_blueball.getCenter();
+				if (!gameStart) {
+					gameStart = true;
+					g_hitterBall.setPower(3.0f, 0);
+				}
+				/*D3DXVECTOR3 targetpos = g_target_blueball.getCenter();
 				D3DXVECTOR3	whitepos = g_sphere[3].getCenter();
 				double theta = acos(sqrt(pow(targetpos.x - whitepos.x, 2)) / sqrt(pow(targetpos.x - whitepos.x, 2) +
 					pow(targetpos.z - whitepos.z, 2)));		// 기본 1 사분면
@@ -574,14 +626,14 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				if (targetpos.z - whitepos.z >= 0 && targetpos.x - whitepos.x <= 0) { theta = PI - theta; } //2 사분면
 				if (targetpos.z - whitepos.z <= 0 && targetpos.x - whitepos.x <= 0){ theta = PI + theta; } // 3 사분면
 				double distance = sqrt(pow(targetpos.x - whitepos.x, 2) + pow(targetpos.z - whitepos.z, 2));
-				g_sphere[3].setPower(distance * cos(theta), distance * sin(theta));
+				g_sphere[3].setPower(distance * cos(theta), distance * sin(theta));*/
 
 				break;
 			}
 			break;
         }
 		
-	case WM_MOUSEMOVE:
+	/*case WM_MOUSEMOVE:
         {
             int new_x = LOWORD(lParam);
             int new_y = HIWORD(lParam);
@@ -630,7 +682,7 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 move = WORLD_MOVE;
             }
             break;
-        }
+        }*/
 	}
 	
 	return ::DefWindowProc(hwnd, msg, wParam, lParam);
@@ -655,6 +707,7 @@ int WINAPI WinMain(HINSTANCE hinstance,
 		::MessageBox(0, "Setup() - FAILED", 0, 0);
 		return 0;
 	}
+	
 	
 	d3d::EnterMsgLoop( Display );
 	
