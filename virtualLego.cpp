@@ -19,6 +19,8 @@
 
 IDirect3DDevice9* Device = NULL;
 
+#define yellowBallCount 54
+
 // window size
 const int Width  = 1024;
 const int Height = 768;
@@ -96,12 +98,23 @@ public:
         pDevice->SetTransform(D3DTS_WORLD, &mWorld);
         pDevice->MultiplyTransform(D3DTS_WORLD, &m_mLocal);
         pDevice->SetMaterial(&m_mtrl);
-		m_pSphereMesh->DrawSubset(0);
+		if(m_pSphereMesh!=NULL)
+			m_pSphereMesh->DrawSubset(0);
     }
 	
     bool hasIntersected(CSphere& ball) 
 	{
 		// Insert your code here.
+		D3DXVECTOR3 vDiff;
+
+		if (this == &ball)
+			return false;
+
+		vDiff = this->getCenter() - ball.getCenter();
+		const float distacne=D3DXVec3Length(&vDiff);
+
+		if (distacne <= this->getRadius() + ball.getRadius())
+			return true;
 
 		return false;
 	}
@@ -109,6 +122,17 @@ public:
 	void hitBy(CSphere& ball) 
 	{ 
 		// Insert your code here.
+		if (hasIntersected(ball)) {
+			float deltaX = ball.getCenter().x - this->getCenter().x;
+			float deltaZ = ball.getCenter().x - this->getCenter().x;
+
+			float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
+			float directionScala = sqrt(deltaX*deltaX + deltaZ * deltaZ);
+			
+			float scale = velocityVectorScala / directionScala;
+
+			ball.setPower(scale*deltaX, scale*deltaZ);
+		}
 	}
 
 	void ballUpdate(float timeDiff) 
@@ -125,14 +149,14 @@ public:
 
 			//correction of position of ball
 			// Please uncomment this part because this correction of ball position is necessary when a ball collides with a wall
-			/*if(tX >= (4.5 - M_RADIUS))
+			if(tX >= (4.5 - M_RADIUS))
 				tX = 4.5 - M_RADIUS;
 			else if(tX <=(-4.5 + M_RADIUS))
 				tX = -4.5 + M_RADIUS;
 			else if(tZ <= (-3 + M_RADIUS))
 				tZ = -3 + M_RADIUS;
 			else if(tZ >= (3 - M_RADIUS))
-				tZ = 3 - M_RADIUS;*/
+				tZ = 3 - M_RADIUS;
 			
 			this->setCenter(tX, cord.y, tZ);
 		}
@@ -241,6 +265,7 @@ public:
 	
 	bool hasIntersected(CSphere& ball) 
 	{
+		
 		// Insert your code here.
 		return false;
 	}
@@ -412,6 +437,7 @@ bool Setup()
 	// create blue ball for set direction
     if (false == g_target_blueball.create(Device, d3d::BLUE)) return false;
 	g_target_blueball.setCenter(.0f, (float)M_RADIUS , .0f);
+
 	
 	// light setting 
     D3DLIGHT9 lit;
@@ -530,6 +556,14 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                         (wire ? D3DFILL_WIREFRAME : D3DFILL_SOLID));
                 }
                 break;
+			case VK_LEFT:
+				g_sphere[2].setPower(10, 10);
+
+				break;
+			case VK_RIGHT:
+				
+
+				break;
             case VK_SPACE:
 				
 				D3DXVECTOR3 targetpos = g_target_blueball.getCenter();
@@ -543,7 +577,6 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				g_sphere[3].setPower(distance * cos(theta), distance * sin(theta));
 
 				break;
-
 			}
 			break;
         }
