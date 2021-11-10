@@ -448,8 +448,6 @@ CSphere	g_propBall;
 CLight	g_light;
 bool gameStart = false;
 
-double g_camera_pos[3] = {0.0, 5.0, -8.0};
-
 // -----------------------------------------------------------------------------
 // Functions
 // -----------------------------------------------------------------------------
@@ -510,11 +508,6 @@ bool Setup()
 	g_propBall.setCenter(4.35f, (float)M_RADIUS, 0.0f);
 	g_propBall.setPower(0, 0);
 	g_propBall.setIsPropBall();
-	
-	// create blue ball for set direction
-    /*if (false == g_target_blueball.create(Device, d3d::BLUE)) return false;
-	g_target_blueball.setCenter(.0f, (float)M_RADIUS , .0f);*/
-
 	
 	// light setting 
     D3DLIGHT9 lit;
@@ -596,16 +589,6 @@ bool Display(float timeDelta)
 		}
 
 		g_propBall.ballUpdate(timeDelta);
-
-
-		// check whether any two balls hit together and update the direction of balls
-		/*for(i = 0 ;i < BallCount; i++){
-			for(j = 0 ; j < BallCount; j++) {
-				//if(i >= j) {continue;} //내가 주석 처리함.
-				g_sphere[i].hitBy(g_sphere[j]);
-			}
-		}*/
-
 		g_propBall.hitBy(g_hitterBall);
 
 		for (i = 0; i < BallCount; i++) {
@@ -623,7 +606,6 @@ bool Display(float timeDelta)
 
 		g_hitterBall.draw(Device, g_mWorld);
 		g_propBall.draw(Device, g_mWorld);
-		//g_target_blueball.draw(Device, g_mWorld);
         g_light.draw(Device);
 		
 		Device->EndScene();
@@ -661,11 +643,13 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 }
                 break;
 			case VK_LEFT:
-				g_propBall.setPower(0, -3.0f);
+				if(gameStart)
+					g_propBall.setPower(0, -3.0f);
 
 				break;
 			case VK_RIGHT:
-				g_propBall.setPower(0, +3.0f);
+				if (gameStart)
+					g_propBall.setPower(0, +3.0f);
 
 				break;
             case VK_SPACE:
@@ -673,16 +657,6 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					gameStart = true;
 					g_hitterBall.setPower(2.0f, 0);
 				}
-				/*D3DXVECTOR3 targetpos = g_target_blueball.getCenter();
-				D3DXVECTOR3	whitepos = g_sphere[3].getCenter();
-				double theta = acos(sqrt(pow(targetpos.x - whitepos.x, 2)) / sqrt(pow(targetpos.x - whitepos.x, 2) +
-					pow(targetpos.z - whitepos.z, 2)));		// 기본 1 사분면
-				if (targetpos.z - whitepos.z <= 0 && targetpos.x - whitepos.x >= 0) { theta = -theta; }	//4 사분면
-				if (targetpos.z - whitepos.z >= 0 && targetpos.x - whitepos.x <= 0) { theta = PI - theta; } //2 사분면
-				if (targetpos.z - whitepos.z <= 0 && targetpos.x - whitepos.x <= 0){ theta = PI + theta; } // 3 사분면
-				double distance = sqrt(pow(targetpos.x - whitepos.x, 2) + pow(targetpos.z - whitepos.z, 2));
-				g_sphere[3].setPower(distance * cos(theta), distance * sin(theta));*/
-
 				break;
 			}
 			break;
