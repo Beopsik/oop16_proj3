@@ -19,17 +19,11 @@
 
 IDirect3DDevice9* Device = NULL;
 
-#define BallCount 60
+#define BallNum 60
 
 // window size
 const int Width  = 1024;
 const int Height = 768;
-
-// There are four balls
-// initialize the position (coordinate) of each ball (ball0 ~ ball3)
-//const float spherePos[4][2] = { {-2.7f,0} , {+2.4f,0} , {3.3f,0} , {-2.7f,-0.9f}}; 
-// initialize the color of each ball (ball0 ~ ball3)
-//const D3DXCOLOR sphereColor[4] = {d3d::RED, d3d::RED, d3d::YELLOW, d3d::WHITE};
 
 // -----------------------------------------------------------------------------
 // Transform matrices
@@ -126,13 +120,13 @@ public:
 		vDiff = this->getCenter() - ball.getCenter();
 		const float distacne=D3DXVec3Length(&vDiff);
 
-		if (distacne <= this->getRadius() + ball.getRadius())
+		if (distacne <= this->getRadius() + ball.getRadius()) 
 			return true;
 
 		return false;
 	}
 	
-	void hitBy(CSphere& ball) 
+	bool hitBy(CSphere& ball) 
 	{ 
 		// Insert your code here.
 		if (hasIntersected(ball)) {
@@ -148,7 +142,10 @@ public:
 
 			if (!this->getIsPropBall())
 				this->setCenter(-4.56f, 1.5f, 0.0f);
+			
+			return true;
 		}
+		return false;
 	}
 
 	void ballUpdate(float timeDiff) 
@@ -301,19 +298,6 @@ public:
 
 	void hitBy(CSphere& ball) 
 	{
-		/*float deltaX = ball.getCenter().x - this->getCenter().x;
-		float deltaZ = ball.getCenter().z - this->getCenter().z;
-
-		float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
-		float directionScala = sqrt(deltaX*deltaX + deltaZ * deltaZ);
-
-		float scale = velocityVectorScala / directionScala;
-
-		ball.setPower(scale*deltaX, scale*deltaZ);
-
-		if (!this->getIsPropBall())
-			this->setCenter(-4.56f, 1.5f, 0.0f);*/
-
 		// Insert your code here.
 		if (hasIntersected(ball)) {
 			if (this->m_x == 0) {
@@ -442,11 +426,12 @@ private:
 // -----------------------------------------------------------------------------
 CWall	g_legoPlane;
 CWall	g_legowall[4];
-CSphere	g_sphere[BallCount];
+CSphere	g_sphere[BallNum];
 CSphere	g_hitterBall;
 CSphere	g_propBall;
 CLight	g_light;
 bool gameStart = false;
+int brokenBallNum = 0;
 
 // -----------------------------------------------------------------------------
 // Functions
@@ -481,7 +466,7 @@ bool Setup()
 	g_legowall[3].setPosition(4.56f, 0.12f, 0.0f);
 
 	// create four balls and set the position
-	float spherePos[BallCount][2] = {};
+	float spherePos[BallNum][2] = {};
 	int posIdx = 0;
 	float row = 2.8;
 	float column = -4.35;
@@ -495,7 +480,7 @@ bool Setup()
 		row -= 0.6;
 	}
 
-	for (i=0;i<BallCount;i++) {
+	for (i=0;i<BallNum;i++) {
 		if (false == g_sphere[i].create(Device, d3d::YELLOW)) return false;
 		g_sphere[i].setCenter(spherePos[i][0], (float)M_RADIUS , spherePos[i][1]);
 		g_sphere[i].setPower(0,0);
@@ -570,7 +555,7 @@ bool Display(float timeDelta)
 		Device->BeginScene();
 		
 		// update the position of each ball. during update, check whether each ball hit by walls.
-		for( i = 0; i < BallCount; i++) {
+		for( i = 0; i < BallNum; i++) {
 			g_sphere[i].ballUpdate(timeDelta);
 			for(j = 0; j < 4; j++){ g_legowall[j].hitBy(g_sphere[i]); }
 		}
@@ -578,8 +563,9 @@ bool Display(float timeDelta)
 		for (j = 0; j < 3; j++) {
 			g_legowall[j].hitBy(g_hitterBall);
 		}
-		if (g_legowall[3].hasIntersected(g_hitterBall)) {
+		if (g_legowall[3].hasIntersected(g_hitterBall) ||brokenBallNum==BallNum) {
 			gameStart = false;
+			brokenBallNum = 0;
 			g_hitterBall.setPower(0, 0);
 			if (!Setup())
 			{
@@ -591,8 +577,9 @@ bool Display(float timeDelta)
 		g_propBall.ballUpdate(timeDelta);
 		g_propBall.hitBy(g_hitterBall);
 
-		for (i = 0; i < BallCount; i++) {
-			g_sphere[i].hitBy(g_hitterBall);
+		for (i = 0; i < BallNum; i++) {
+			if (g_sphere[i].hitBy(g_hitterBall))
+				brokenBallNum++;
 		}
 
 		// draw plane, walls, and spheres
@@ -600,7 +587,7 @@ bool Display(float timeDelta)
 		for (i=0;i<4;i++) 	{
 			g_legowall[i].draw(Device, g_mWorld);
 		}
-		for (i = 0; i < BallCount; i++) {
+		for (i = 0; i < BallNum; i++) {
 			g_sphere[i].draw(Device, g_mWorld);
 		}
 
