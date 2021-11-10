@@ -54,6 +54,7 @@ private :
 	float					m_velocity_x;
 	float					m_velocity_z;
 	bool					isPropBall=false;
+	bool					isHitterBall = false;
 
 public:
     CSphere(void)
@@ -73,6 +74,12 @@ public:
 	}
 	bool getIsPropBall() {
 		return this->isPropBall;
+	}
+	void setIsHitterBall() {
+		this->isHitterBall = true;
+	}
+	bool getIsHitterBall() {
+		return this->isHitterBall;
 	}
     bool create(IDirect3DDevice9* pDevice, D3DXCOLOR color = d3d::WHITE)
     {
@@ -274,14 +281,51 @@ public:
 	
 	bool hasIntersected(CSphere& ball) 
 	{
-		
 		// Insert your code here.
+		if (ball.getIsHitterBall()) {
+			if ((int)this->m_x == 0) {
+				const float distanceZ = abs(ball.getCenter().z-this->m_z);
+				if (distanceZ-this->m_depth/2 <= ball.getRadius()) {
+					return true;
+				}
+			}
+			else if ((int)this->m_z == 0) {
+				const float distanceX = abs(this->m_x - ball.getCenter().x);
+				if (distanceX-this->m_width/2 <= ball.getRadius()) {
+					return true;
+				}
+			}
+		}
 		return false;
 	}
 
 	void hitBy(CSphere& ball) 
 	{
+		/*float deltaX = ball.getCenter().x - this->getCenter().x;
+		float deltaZ = ball.getCenter().z - this->getCenter().z;
+
+		float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
+		float directionScala = sqrt(deltaX*deltaX + deltaZ * deltaZ);
+
+		float scale = velocityVectorScala / directionScala;
+
+		ball.setPower(scale*deltaX, scale*deltaZ);
+
+		if (!this->getIsPropBall())
+			this->setCenter(-4.56f, 1.5f, 0.0f);*/
+
 		// Insert your code here.
+		if (hasIntersected(ball)) {
+			if (this->m_x == 0) {
+				float deltaZ = ball.getVelocity_Z() - this->m_z;
+				float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
+				ball.setPower(ball.getVelocity_X(), -ball.getVelocity_Z());
+			}
+			else {
+				float velocityVectorScala = sqrt(ball.getVelocity_X()*ball.getVelocity_X() + ball.getVelocity_Z()*ball.getVelocity_Z());
+				ball.setPower(-ball.getVelocity_X(), ball.getVelocity_Z());
+			}
+		}
 	}    
 	
 	void setPosition(float x, float y, float z)
@@ -460,6 +504,7 @@ bool Setup()
 	}
 	if (false == g_hitterBall.create(Device, d3d::RED)) return false;
 	g_hitterBall.setCenter(3.72f, (float)M_RADIUS, 0.0f);
+	g_hitterBall.setIsHitterBall();
 
 	if (false == g_propBall.create(Device, d3d::BLACK)) return false;
 	g_propBall.setCenter(4.35f, (float)M_RADIUS, 0.0f);
@@ -534,9 +579,13 @@ bool Display(float timeDelta)
 		// update the position of each ball. during update, check whether each ball hit by walls.
 		for( i = 0; i < BallCount; i++) {
 			g_sphere[i].ballUpdate(timeDelta);
-			for(j = 0; j < 4; j++){ g_legowall[i].hitBy(g_sphere[j]); }
+			for(j = 0; j < 4; j++){ g_legowall[j].hitBy(g_sphere[i]); }
 		}
 		g_hitterBall.ballUpdate(timeDelta);
+		for (j = 0; j < 4; j++) {
+			g_legowall[j].hitBy(g_hitterBall);
+		}
+
 		g_propBall.ballUpdate(timeDelta);
 
 
@@ -550,9 +599,6 @@ bool Display(float timeDelta)
 
 		g_propBall.hitBy(g_hitterBall);
 
-		for (j = 0; j < 4; j++) { 
-			g_legowall[i].hitBy(g_hitterBall); 
-		}
 		for (i = 0; i < BallCount; i++) {
 			g_sphere[i].hitBy(g_hitterBall);
 		}
@@ -616,7 +662,7 @@ LRESULT CALLBACK d3d::WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             case VK_SPACE:
 				if (!gameStart) {
 					gameStart = true;
-					g_hitterBall.setPower(3.0f, 0);
+					g_hitterBall.setPower(2.0f, 0);
 				}
 				/*D3DXVECTOR3 targetpos = g_target_blueball.getCenter();
 				D3DXVECTOR3	whitepos = g_sphere[3].getCenter();
