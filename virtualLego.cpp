@@ -478,9 +478,9 @@ bool Setup()
 	if (false == g_legowall[1].create(Device, -1, -1, 9, 0.3f, 0.12f, d3d::DARKRED)) return false;
 	g_legowall[1].setPosition(0.0f, 0.12f, -3.06f);
 	if (false == g_legowall[2].create(Device, -1, -1, 0.12f, 0.3f, 6.24f, d3d::DARKRED)) return false;
-	g_legowall[2].setPosition(4.56f, 0.12f, 0.0f);
+	g_legowall[2].setPosition(-4.56f, 0.12f, 0.0f);
 	if (false == g_legowall[3].create(Device, -1, -1, 0.12f, 0.3f, 6.24f, d3d::DARKRED)) return false;
-	g_legowall[3].setPosition(-4.56f, 0.12f, 0.0f);
+	g_legowall[3].setPosition(4.56f, 0.12f, 0.0f);
 
 	// create four balls and set the position
 	float spherePos[BallCount][2] = {};
@@ -582,8 +582,17 @@ bool Display(float timeDelta)
 			for(j = 0; j < 4; j++){ g_legowall[j].hitBy(g_sphere[i]); }
 		}
 		g_hitterBall.ballUpdate(timeDelta);
-		for (j = 0; j < 4; j++) {
+		for (j = 0; j < 3; j++) {
 			g_legowall[j].hitBy(g_hitterBall);
+		}
+		if (g_legowall[3].hasIntersected(g_hitterBall)) {
+			gameStart = false;
+			g_hitterBall.setPower(0, 0);
+			if (!Setup())
+			{
+				::MessageBox(0, "Setup() - FAILED", 0, 0);
+				return false;
+			}
 		}
 
 		g_propBall.ballUpdate(timeDelta);
